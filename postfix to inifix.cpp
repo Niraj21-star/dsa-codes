@@ -1,79 +1,81 @@
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
 #include <math.h>
 
-#define MAX 50
+#define MAX 100
+
 char stack[MAX];
 int top = -1;
 
-void push(char x) { stack[++top] = x; }
+void push(char c) { stack[++top] = c; }
+char pop() { return (top == -1) ? '\0' : stack[top--]; }
+char peek() { return (top == -1) ? '\0' : stack[top]; }
 
-char pop() { return stack[top--]; }
-
-int precedence(char x) {
-    if (x == '(') return 0;
-    if (x == '+' || x == '-') return 1;
-    if (x == '*' || x == '/') return 2;
-    if (x == '^') return 3;
+int precedence(char op) {
+    if (op == '^') return 3;
+    if (op == '*' || op == '/') return 2;
+    if (op == '+' || op == '-') return 1;
     return 0;
 }
 
+// ---------------- Infix to Postfix ----------------
 void infixToPostfix(char infix[], char postfix[]) {
-    int i = 0, k = 0;
-    char ch;
-    while ((ch = infix[i++]) != '\0') {
-        if (isalnum(ch))
-            postfix[k++] = ch; 
-        else if (ch == '(')
-            push(ch);
-        else if (ch == ')') {
-            while (stack[top] != '(')
-                postfix[k++] = pop();
-            pop(); 
-        } else { 
-            while (top != -1 && precedence(stack[top]) >= precedence(ch))
-                postfix[k++] = pop();
-            push(ch);
+    int j = 0;
+    for (int i = 0; i < strlen(infix); i++) {
+        char c = infix[i];
+
+        if (isalnum(c))  // operand
+            postfix[j++] = c;
+        else if (c == '(')
+            push(c);
+        else if (c == ')') {
+            while (peek() != '(')
+                postfix[j++] = pop();
+            pop(); // remove '('
+        } else { // operator
+            while (top != -1 && precedence(peek()) >= precedence(c))
+                postfix[j++] = pop();
+            push(c);
         }
     }
     while (top != -1)
-        postfix[k++] = pop();
-    postfix[k] = '\0';
+        postfix[j++] = pop();
+    postfix[j] = '\0';
 }
 
+// ---------------- Postfix Evaluation ----------------
 int evalPostfix(char postfix[]) {
-    int s[MAX], t = -1;
-    char ch;
-    int i = 0, a, b;
-    while ((ch = postfix[i++]) != '\0') {
-        if (isdigit(ch))
-            s[++t] = ch - '0'; t
+    int valStack[MAX], valTop = -1;
+    for (int i = 0; i < strlen(postfix); i++) {
+        char c = postfix[i];
+        if (isdigit(c))
+            valStack[++valTop] = c - '0';  // convert char to int
         else {
-            b = s[t--];
-            a = s[t--];
-            switch (ch) {
-                case '+': s[++t] = a + b; break;
-                case '-': s[++t] = a - b; break;
-                case '*': s[++t] = a * b; break;
-                case '/': s[++t] = a / b; break;
-                case '^': s[++t] = pow(a, b); break;
+            int b = valStack[valTop--];
+            int a = valStack[valTop--];
+            switch (c) {
+                case '+': valStack[++valTop] = a + b; break;
+                case '-': valStack[++valTop] = a - b; break;
+                case '*': valStack[++valTop] = a * b; break;
+                case '/': valStack[++valTop] = a / b; break;
+                case '^': valStack[++valTop] = pow(a, b); break;
             }
         }
     }
-    return s[t];
+    return valStack[valTop];
 }
 
+// ---------------- Main ----------------
 int main() {
     char infix[MAX], postfix[MAX];
-    printf("Enter infix expression (use single-digit numbers): ");
+    printf("Enter an infix expression (use single-digit numbers): ");
     scanf("%s", infix);
 
     infixToPostfix(infix, postfix);
-    printf("Postfix: %s\n", postfix);
+    printf("Postfix expression: %s\n", postfix);
 
-    int result = evalPostfix(postfix);
-    printf("Result: %d\n", result);
+    printf("Evaluated result: %d\n", evalPostfix(postfix));
 
     return 0;
 }
-
